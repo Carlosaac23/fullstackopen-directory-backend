@@ -39,19 +39,18 @@ app.use(morgan(":method :url :status :res[content-length] - :response-time ms :b
 //   return maxId + 1;
 // }
 
-app.post("/api/contacts", (req, res) => {
-  const body = req.body;
-
-  if (!body.name || !body.phone) {
-    return res.status(400).json({ error: "name or phone missing" });
-  }
+app.post("/api/contacts", (req, res, next) => {
+  const { name, phone } = req.body;
 
   const contact = new Contact({
-    name: body.name,
-    phone: body.phone,
+    name,
+    phone,
   });
 
-  contact.save().then((savedContact) => res.json(savedContact));
+  contact
+    .save()
+    .then((savedContact) => res.json(savedContact))
+    .catch((error) => next(error));
 });
 
 app.get("/api/contacts", (req, res) => {
@@ -98,6 +97,8 @@ function errorHandler(error, req, res, next) {
 
   if (error.name === "CastError") {
     return res.status(400).send({ error: "malformatted id" });
+  } else if (error.name === "ValidationError") {
+    return res.status(400).json({ error: error.message });
   }
 
   next(error);
