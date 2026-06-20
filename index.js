@@ -64,17 +64,46 @@ app.get("/info", (req, res) => {
   });
 });
 
-app.get("/api/contacts/:id", (req, res) => {
+app.get("/api/contacts/:id", (req, res, next) => {
   const id = req.params.id;
-  Contact.findById(id).then((contact) => res.json(contact));
+  Contact.findById(id)
+    .then((contact) => res.json(contact))
+    .catch((error) => next(error));
 });
 
-app.delete("/api/contacts/:id", (req, res) => {
-  const id = Number(req.params.id);
-  contacts = contacts.filter((contact) => contact.id !== id);
+app.put("/api/contacts/:id", (req, res, next) => {
+  const id = req.params.id;
+  const body = req.body;
 
-  return res.status(204).end();
+  const contact = {
+    name: body.name,
+    phone: body.phone,
+  };
+
+  Contact.findByIdAndUpdate(id, contact, { new: true })
+    .then((returnedContact) => res.json(returnedContact))
+    .catch((error) => next(error));
 });
+
+app.delete("/api/contacts/:id", (req, res, next) => {
+  const id = req.params.id;
+
+  Contact.findByIdAndDelete(id)
+    .then((result) => res.status(204).end())
+    .catch((error) => next(error));
+});
+
+function errorHandler(error, req, res, next) {
+  console.error(error);
+
+  if (error.name === "CastError") {
+    return res.status(400).send({ error: "malformatted id" });
+  }
+
+  next(error);
+}
+
+app.use(errorHandler);
 
 const PORT = process.env.PORT;
 
